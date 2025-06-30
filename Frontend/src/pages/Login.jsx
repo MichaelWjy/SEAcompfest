@@ -25,7 +25,7 @@ const Login = () => {
                 setError('Invalid email or password');
             }
         } catch (err) {
-            console.error('Registration error:', err);
+            console.error('Login error:', err);
             setError('Login failed. Please try again.');
         } finally {
             setLoading(false);
