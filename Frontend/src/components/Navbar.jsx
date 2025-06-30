@@ -1,23 +1,13 @@
 import React, { useState } from 'react';
-import { Menu, X, Utensils, User, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Utensils, User, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
-  const [isAuthenticated, setIsAuthenticated] = useState(true); 
-  const [user, setUser] = useState({ fullName: 'John Doe' });
-  const [isAdmin, setIsAdmin] = useState(true);
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUser(null);
-    setIsAdmin(false);
-    navigate('/');
-    setIsOpen(false);
-  };
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
 
   const navItems = [
     { name: 'Home', href: '/' },
@@ -25,15 +15,20 @@ const Navbar = () => {
     { name: 'Contact Us', href: '/contact' },
   ];
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   const isActive = (path) => {
     return location.pathname === path;
   };
 
   return (
-    <nav className="bg-white/95 backdrop-blur-sm shadow-lg fixed top-0 z-50 w-full">
+    <nav className="bg-white/95 backdrop-blur-sm shadow-lg fixed w-full top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-
+          {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <div className="bg-emerald-500 p-2 rounded-lg">
               <Utensils className="h-6 w-6 text-white" />
@@ -41,6 +36,7 @@ const Navbar = () => {
             <span className="text-2xl font-bold text-gray-800">SEA Catering</span>
           </Link>
 
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <Link
@@ -55,30 +51,12 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-
+            
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
-                <Link
-                  to="/subscription"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    isActive('/subscription')
-                      ? 'text-emerald-600 bg-emerald-50'
-                      : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
-                  }`}
-                >
-                  Subscription
-                </Link>
-                <Link
-                  to="/dashboard"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    isActive('/dashboard')
-                      ? 'text-emerald-600 bg-emerald-50'
-                      : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-                {isAdmin && (
+                {/* Show different navigation based on user role */}
+                {isAdmin ? (
+                  // Admin only sees Admin Dashboard
                   <Link
                     to="/admin"
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
@@ -87,9 +65,34 @@ const Navbar = () => {
                         : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
                     }`}
                   >
-                    Admin
+                    Admin Dashboard
                   </Link>
+                ) : (
+                  // Regular users see Subscription and Dashboard
+                  <>
+                    <Link
+                      to="/subscription"
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                        isActive('/subscription')
+                          ? 'text-emerald-600 bg-emerald-50'
+                          : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                    >
+                      Subscription
+                    </Link>
+                    <Link
+                      to="/dashboard"
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                        isActive('/dashboard')
+                          ? 'text-emerald-600 bg-emerald-50'
+                          : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                    >
+                      Dashboard
+                    </Link>
+                  </>
                 )}
+                
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-gray-600" />
                   <span className="text-sm text-gray-700">{user?.fullName}</span>
@@ -119,6 +122,7 @@ const Navbar = () => {
             )}
           </div>
 
+          {/* Mobile menu button */}
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -130,9 +134,10 @@ const Navbar = () => {
         </div>
       </div>
 
+      {/* Mobile Navigation Menu */}
       {isOpen && (
         <div className="md:hidden">
-          <div className="w-1/2 fixed left-0 top-16 h-dvh px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t shadow-lg z-50 transition-all duration-300">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
             {navItems.map((item) => (
               <Link
                 key={item.name}
@@ -147,32 +152,12 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-
+            
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/subscription"
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                    isActive('/subscription')
-                      ? 'text-emerald-600 bg-emerald-50'
-                      : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Subscription
-                </Link>
-                <Link
-                  to="/dashboard"
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                    isActive('/dashboard')
-                      ? 'text-emerald-600 bg-emerald-50'
-                      : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Dashboard
-                </Link>
-                {isAdmin && (
+                {/* Show different navigation based on user role */}
+                {isAdmin ? (
+                  // Admin only sees Admin Dashboard
                   <Link
                     to="/admin"
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
@@ -182,19 +167,46 @@ const Navbar = () => {
                     }`}
                     onClick={() => setIsOpen(false)}
                   >
-                    Admin
+                    Admin Dashboard
                   </Link>
+                ) : (
+                  // Regular users see Subscription and Dashboard
+                  <>
+                    <Link
+                      to="/subscription"
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
+                        isActive('/subscription')
+                          ? 'text-emerald-600 bg-emerald-50'
+                          : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Subscription
+                    </Link>
+                    <Link
+                      to="/dashboard"
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
+                        isActive('/dashboard')
+                          ? 'text-emerald-600 bg-emerald-50'
+                          : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                  </>
                 )}
+                
                 <div className="px-3 py-2 border-t border-gray-200 mt-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700">{user?.fullName}</span>
-                  </div>
                     <button
                       onClick={handleLogout}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium mt-5"
+                      className="text-red-600 hover:text-red-700 text-sm font-medium"
                     >
                       Logout
                     </button>
+                  </div>
                 </div>
               </>
             ) : (

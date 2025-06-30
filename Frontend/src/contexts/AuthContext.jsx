@@ -16,21 +16,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
 
     useEffect(() => {
-        // Initialize with admin user if no users exist
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        if (users.length === 0) {
-            const adminUser = {
-                id: uuidv4(),
-                fullName: 'Admin',
-                email: 'admin@seacatering.com',
-                password: bcrypt.hashSync('Admin123!', 10),
-                isAdmin: true,
-                createdAt: new Date()
-            };
-            localStorage.setItem('users', JSON.stringify([adminUser]));
-        }
-
-        // Check for existing session
+        // Check for existing session only - no default user creation
         const currentUser = localStorage.getItem('currentUser');
         if (currentUser) {
             setUser(JSON.parse(currentUser));
@@ -49,11 +35,11 @@ export const AuthProvider = ({ children }) => {
 
     const sanitizeInput = (input) => {
         return input
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;')
-            .replace(/\//g, '&#x2F;');
+            .replace(/</g, '<')
+            .replace(/>/g, '>')
+            .replace(/"/g, '"')
+            .replace(/'/g, '')
+                .replace(/\//g, '/');
     };
 
     const register = async (fullName, email, password) => {
@@ -88,7 +74,7 @@ export const AuthProvider = ({ children }) => {
                 fullName: sanitizedName,
                 email: sanitizedEmail,
                 password: bcrypt.hashSync(password, 10),
-                isAdmin: false,
+                isAdmin: false, // All new users are regular users by default
                 createdAt: new Date()
             };
 
