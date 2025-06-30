@@ -10,7 +10,12 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     }
 
     if (adminOnly && !isAdmin) {
-        return <Navigate to="/dashboard\" replace />;
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    // Redirect admin users away from subscription page
+    if (isAdmin && window.location.pathname === '/subscription') {
+        return <Navigate to="/admin" replace />;
     }
 
     return <>{children}</>;
