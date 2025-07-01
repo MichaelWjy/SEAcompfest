@@ -8,6 +8,9 @@ Project ini dikembangkan dalam rangka **Software Engineering Academy – COMPFES
 
 ---
 
+FE masih menggunakan data dari local storage belum dimasukkan kedalam BE ke DB sehingga harus membuat 1 user pertama sebagai admin dahulu dan buat 1 user dummy untuk "customer" lalu fitur lainnya bisa berjalan dengan sebagaimana mestinya walaupun belum dihubungkan dengan backend
+
+
 ## ✨ Fitur Utama
 
 ✅ Registrasi & Login (dengan role Buyer/Seller/Admin)  
@@ -15,9 +18,9 @@ Project ini dikembangkan dalam rangka **Software Engineering Academy – COMPFES
 ✅ Dashboard admin untuk mengelola menu & pesanan  
 ✅ Fitur testimoni pelanggan (review dan carousel)  
 ✅ Real-time data dengan Supabase PostgreSQL  
-✅ API backend dengan Express.js  
+✅ API backend dengan Express.js (FE belum fetch dengan BE dengan benar)
 ✅ Frontend modern dengan React + Vite + Tailwind CSS  
-✅ Deployment di Vercel
+✅ Deployment di Vercel (namun masih blank) 
 
 ---
 
@@ -26,7 +29,6 @@ Project ini dikembangkan dalam rangka **Software Engineering Academy – COMPFES
 - **Frontend:** React.js + Vite + Tailwind CSS
 - **Backend:** Express.js + Node.js
 - **Database:** Supabase PostgreSQL
-- **Realtime:** Socket.IO *(jika ada chat)*
 - **Deployment:** Vercel
 
 ---
