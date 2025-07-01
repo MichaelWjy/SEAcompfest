@@ -34,7 +34,7 @@ const MenuPlans = () => {
                         >
                             <div className="aspect-video overflow-hidden">
                                 <img
-                                    src={plan.image}
+                                    src={plan.image_url}
                                     alt={plan.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
@@ -77,7 +77,7 @@ const MenuPlans = () => {
                         <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="relative">
                                 <img
-                                    src={selectedPlan.image}
+                                    src={selectedPlan.image_url}
                                     alt={selectedPlan.name}
                                     className="w-full h-64 object-cover"
                                 />

@@ -3,7 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { Star, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 
 const TestimonialsSection = () => {
-    const { testimonials, addTestimonial } = useData();
+    const { testimonials = [], addTestimonial } = useData();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
@@ -13,41 +13,37 @@ const TestimonialsSection = () => {
     });
     const [errors, setErrors] = useState({});
 
+    // Amanin navigasi
     const nextTestimonial = () => {
+        if (testimonials.length === 0) return;
         setCurrentIndex((prev) => (prev + 1) % testimonials.length);
     };
 
     const prevTestimonial = () => {
+        if (testimonials.length === 0) return;
         setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
     };
 
     const validateForm = () => {
         const newErrors = {};
-
         if (!formData.customerName.trim()) {
             newErrors.customerName = 'Name is required';
         }
-
         if (!formData.message.trim()) {
             newErrors.message = 'Review message is required';
         } else if (formData.message.length < 10) {
             newErrors.message = 'Review must be at least 10 characters long';
         }
-
         if (formData.rating < 1 || formData.rating > 5) {
             newErrors.rating = 'Rating must be between 1 and 5';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         addTestimonial(formData);
         setFormData({ customerName: '', message: '', rating: 5 });
@@ -55,24 +51,20 @@ const TestimonialsSection = () => {
         setErrors({});
     };
 
-    const renderStars = (rating, interactive = false, onRatingChange) => {
-        return (
-            <div className="flex space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                        key={star}
-                        className={`h-5 w-5 ${star <= rating
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                            } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-                        onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
-                    />
-                ))}
-            </div>
-        );
-    };
+    const renderStars = (rating, interactive = false, onRatingChange) => (
+        <div className="flex space-x-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    className={`h-5 w-5 ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'} ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''
+                        }`}
+                    onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
+                />
+            ))}
+        </div>
+    );
 
-    const safeTestimonial = testimonials?.[currentIndex] || null;
+    const safeTestimonial = testimonials.length > 0 ? testimonials[currentIndex] : null;
 
     return (
         <section className="py-20 bg-white">
@@ -89,7 +81,7 @@ const TestimonialsSection = () => {
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Testimonial Carousel */}
                     <div className="relative">
-                        {testimonials?.length > 0 && safeTestimonial ? (
+                        {safeTestimonial ? (
                             <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-2xl p-8">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center space-x-4">
@@ -140,8 +132,8 @@ const TestimonialsSection = () => {
                             <p className="text-gray-500">No testimonials yet.</p>
                         )}
 
-                        {/* Dots indicator */}
-                        {testimonials?.length > 1 && (
+                        {/* Dots */}
+                        {testimonials.length > 1 && (
                             <div className="flex justify-center mt-6 space-x-2">
                                 {testimonials.map((_, index) => (
                                     <button
