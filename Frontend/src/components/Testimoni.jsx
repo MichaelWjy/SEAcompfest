@@ -9,7 +9,7 @@ const TestimonialsSection = () => {
     const [formData, setFormData] = useState({
         customerName: '',
         message: '',
-        rating: 5
+        rating: 5,
     });
     const [errors, setErrors] = useState({});
 
@@ -62,8 +62,8 @@ const TestimonialsSection = () => {
                     <Star
                         key={star}
                         className={`h-5 w-5 ${star <= rating
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
                             } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
                         onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
                     />
@@ -71,6 +71,8 @@ const TestimonialsSection = () => {
             </div>
         );
     };
+
+    const safeTestimonial = testimonials?.[currentIndex] || null;
 
     return (
         <section className="py-20 bg-white">
@@ -87,20 +89,20 @@ const TestimonialsSection = () => {
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Testimonial Carousel */}
                     <div className="relative">
-                        {testimonials.length > 0 && (
+                        {testimonials?.length > 0 && safeTestimonial ? (
                             <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-2xl p-8">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center space-x-4">
                                         <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
                                             <span className="text-white font-bold text-lg">
-                                                {testimonials[currentIndex].customerName.charAt(0)}
+                                                {safeTestimonial.customerName?.charAt(0).toUpperCase() || '?'}
                                             </span>
                                         </div>
                                         <div>
                                             <h4 className="font-semibold text-gray-900">
-                                                {testimonials[currentIndex].customerName}
+                                                {safeTestimonial.customerName || 'Anonymous'}
                                             </h4>
-                                            {renderStars(testimonials[currentIndex].rating)}
+                                            {renderStars(safeTestimonial.rating || 5)}
                                         </div>
                                     </div>
 
@@ -121,21 +123,25 @@ const TestimonialsSection = () => {
                                 </div>
 
                                 <blockquote className="text-gray-700 text-lg leading-relaxed">
-                                    "{testimonials[currentIndex].message}"
+                                    "{safeTestimonial.message || 'No testimonial available.'}"
                                 </blockquote>
 
                                 <div className="mt-4 text-sm text-gray-500">
-                                    {new Date(testimonials[currentIndex].date).toLocaleDateString('id-ID', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                    })}
+                                    {safeTestimonial.date
+                                        ? new Date(safeTestimonial.date).toLocaleDateString('id-ID', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                        })
+                                        : 'Unknown date'}
                                 </div>
                             </div>
+                        ) : (
+                            <p className="text-gray-500">No testimonials yet.</p>
                         )}
 
                         {/* Dots indicator */}
-                        {testimonials.length > 1 && (
+                        {testimonials?.length > 1 && (
                             <div className="flex justify-center mt-6 space-x-2">
                                 {testimonials.map((_, index) => (
                                     <button
@@ -179,7 +185,9 @@ const TestimonialsSection = () => {
                                     <input
                                         type="text"
                                         value={formData.customerName}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                                        onChange={(e) =>
+                                            setFormData((prev) => ({ ...prev, customerName: e.target.value }))
+                                        }
                                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.customerName ? 'border-red-300' : 'border-gray-300'
                                             }`}
                                         placeholder="Enter your name"
@@ -194,7 +202,7 @@ const TestimonialsSection = () => {
                                         Rating *
                                     </label>
                                     {renderStars(formData.rating, true, (rating) =>
-                                        setFormData(prev => ({ ...prev, rating }))
+                                        setFormData((prev) => ({ ...prev, rating }))
                                     )}
                                     {errors.rating && (
                                         <p className="mt-1 text-sm text-red-600">{errors.rating}</p>
@@ -207,7 +215,9 @@ const TestimonialsSection = () => {
                                     </label>
                                     <textarea
                                         value={formData.message}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                                        onChange={(e) =>
+                                            setFormData((prev) => ({ ...prev, message: e.target.value }))
+                                        }
                                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.message ? 'border-red-300' : 'border-gray-300'
                                             }`}
                                         rows={4}
