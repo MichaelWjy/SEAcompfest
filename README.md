@@ -90,10 +90,4 @@ FE masih menggunakan data dari local storage belum dimasukkan kedalam BE ke DB s
 
 ---
 
-## 📚 Lisensi
-
-Lisensi proyek ini tunduk pada kebijakan internal COMPFEST.
-
----
-
 > SEA Catering — Makan Sehat, Hidup Hebat! 🌱✨
