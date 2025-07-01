@@ -5,18 +5,18 @@ dotenv.config();
 
 const { Pool } = pg;
 
-const db = new Pool({
+const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
+    ssl: process.env.NODE_ENV === 'production' ? {
         rejectUnauthorized: false, 
-    },
+    } : false,
 });
 
 export const initializeDatabase = async () => {
     try {
         await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         full_name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
@@ -28,7 +28,7 @@ export const initializeDatabase = async () => {
 
         await pool.query(`
       CREATE TABLE IF NOT EXISTS meal_plans (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
         description TEXT,
@@ -42,14 +42,14 @@ export const initializeDatabase = async () => {
 
         await pool.query(`
       CREATE TABLE IF NOT EXISTS subscriptions (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID REFERENCES users(id),
         name TEXT NOT NULL,
         phone TEXT NOT NULL,
         plan_name TEXT NOT NULL,
         plan_price INTEGER NOT NULL,
-        meal_types TEXT NOT NULL,
-        delivery_days TEXT NOT NULL,
+        meal_types JSONB NOT NULL,
+        delivery_days JSONB NOT NULL,
         allergies TEXT,
         total_price INTEGER NOT NULL,
         status TEXT DEFAULT 'active',
@@ -62,7 +62,7 @@ export const initializeDatabase = async () => {
 
         await pool.query(`
       CREATE TABLE IF NOT EXISTS testimonials (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         customer_name TEXT NOT NULL,
         message TEXT NOT NULL,
         rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
@@ -72,15 +72,28 @@ export const initializeDatabase = async () => {
       )
     `);
 
+        // Check if admin user exists
+        const adminResult = await pool.query('SELECT COUNT(*) FROM users WHERE is_admin = true');
+        const adminCount = parseInt(adminResult.rows[0].count);
+
+        if (adminCount === 0) {
+            const bcrypt = await import('bcryptjs');
+            const hashedPassword = bcrypt.hashSync('Admin123!', 10);
+            
+            await pool.query(`
+                INSERT INTO users (full_name, email, password, is_admin)
+                VALUES ($1, $2, $3, $4)
+            `, ['Admin User', 'admin@seacatering.com', hashedPassword, true]);
+            
+            console.log('✅ Default admin user created: admin@seacatering.com / Admin123!');
+        }
+
         const mealPlansResult = await pool.query('SELECT COUNT(*) FROM meal_plans');
         const mealPlansCount = parseInt(mealPlansResult.rows[0].count);
 
         if (mealPlansCount === 0) {
-            const { v4: uuidv4 } = await import('uuid');
-
             const defaultMealPlans = [
                 {
-                    id: uuidv4(),
                     name: 'Diet Plan',
                     price: 30000,
                     description: 'Perfect for weight management and healthy living',
@@ -94,7 +107,6 @@ export const initializeDatabase = async () => {
                         'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800',
                 },
                 {
-                    id: uuidv4(),
                     name: 'Protein Plan',
                     price: 40000,
                     description: 'High-protein meals for active lifestyles and muscle building',
@@ -108,7 +120,6 @@ export const initializeDatabase = async () => {
                         'https://images.pexels.com/photos/1566837/pexels-photo-1566837.jpeg?auto=compress&cs=tinysrgb&w=800',
                 },
                 {
-                    id: uuidv4(),
                     name: 'Royal Plan',
                     price: 60000,
                     description: 'Premium gourmet meals with the finest ingredients',
@@ -126,11 +137,10 @@ export const initializeDatabase = async () => {
             for (const plan of defaultMealPlans) {
                 await pool.query(
                     `
-            INSERT INTO meal_plans (id, name, price, description, features, image_url)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO meal_plans (name, price, description, features, image_url)
+            VALUES ($1, $2, $3, $4, $5)
           `,
                     [
-                        plan.id,
                         plan.name,
                         plan.price,
                         plan.description,
@@ -145,24 +155,19 @@ export const initializeDatabase = async () => {
         const testimonialsCount = parseInt(testimonialsResult.rows[0].count);
 
         if (testimonialsCount === 0) {
-            const { v4: uuidv4 } = await import('uuid');
-
             const defaultTestimonials = [
                 {
-                    id: uuidv4(),
                     customer_name: 'Sarah Johnson',
                     message:
                         'SEA Catering has transformed my eating habits! The meals are delicious and perfectly portioned.',
                     rating: 5,
                 },
                 {
-                    id: uuidv4(),
                     customer_name: 'Ahmad Rahman',
                     message: 'Great service and amazing food quality. Delivery is always on time!',
                     rating: 5,
                 },
                 {
-                    id: uuidv4(),
                     customer_name: 'Maria Santos',
                     message: 'The Royal Plan is absolutely worth it. Every meal feels like fine dining.',
                     rating: 4,
@@ -172,11 +177,10 @@ export const initializeDatabase = async () => {
             for (const testimonial of defaultTestimonials) {
                 await pool.query(
                     `
-            INSERT INTO testimonials (id, customer_name, message, rating)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO testimonials (customer_name, message, rating)
+            VALUES ($1, $2, $3)
           `,
                     [
-                        testimonial.id,
                         testimonial.customer_name,
                         testimonial.message,
                         testimonial.rating,
@@ -192,4 +196,4 @@ export const initializeDatabase = async () => {
     }
 };
 
-export default db;
+export default pool;
