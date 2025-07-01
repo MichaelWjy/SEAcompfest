@@ -14,13 +14,38 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true); 
 
     useEffect(() => {
-        // Check for existing session only - no default user creation
-        const currentUser = localStorage.getItem('currentUser');
-        if (currentUser) {
-            setUser(JSON.parse(currentUser));
-        }
+        const checkExistingSession = () => {
+            try {
+                const currentUser = localStorage.getItem('currentUser');
+                const loginTimestamp = localStorage.getItem('loginTimestamp');
+
+                if (currentUser && loginTimestamp) {
+                    const user = JSON.parse(currentUser);
+                    const timestamp = parseInt(loginTimestamp);
+                    const now = Date.now();
+                    const sessionDuration = 7 * 24 * 60 * 60 * 1000; 
+
+                    if (now - timestamp < sessionDuration) {
+                        setUser(user);
+                    } else {
+                        localStorage.removeItem('currentUser');
+                        localStorage.removeItem('loginTimestamp');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking existing session:', error);
+                // Clear corrupted data
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('loginTimestamp');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkExistingSession();
     }, []);
 
     const validatePassword = (password) => {
@@ -35,11 +60,11 @@ export const AuthProvider = ({ children }) => {
 
     const sanitizeInput = (input) => {
         return input
-            .replace(/</g, '<')
-            .replace(/>/g, '>')
-            .replace(/"/g, '"')
-            .replace(/'/g, '')
-                .replace(/\//g, '/');
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
     };
 
     const register = async (fullName, email, password) => {
@@ -88,7 +113,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (email, password) => {
+    const login = async (email, password, rememberMe = true) => {
         try {
             const sanitizedEmail = sanitizeInput(email.trim().toLowerCase());
             const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -98,8 +123,18 @@ export const AuthProvider = ({ children }) => {
             if (foundUser && bcrypt.compareSync(password, foundUser.password)) {
                 const userWithoutPassword = { ...foundUser };
                 delete userWithoutPassword.password;
+
                 setUser(userWithoutPassword);
-                localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+
+                if (rememberMe) {
+                    // Store user session with timestamp
+                    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+                    localStorage.setItem('loginTimestamp', Date.now().toString());
+                } else {
+                    // For session-only login (though we'll default to persistent)
+                    sessionStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+                }
+
                 return true;
             }
 
@@ -113,6 +148,13 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('loginTimestamp');
+        sessionStorage.removeItem('currentUser');
+    };
+
+    const updateUserSession = (updatedUser) => {
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
     };
 
     const value = {
@@ -120,8 +162,10 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        updateUserSession,
         isAuthenticated: !!user,
-        isAdmin: user?.isAdmin || false
+        isAdmin: user?.isAdmin || false,
+        loading
     };
 
     return (

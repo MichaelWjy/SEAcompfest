@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Utensils } from 'lucide-react';
 
@@ -7,10 +7,20 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const from = location.state?.from?.pathname || (isAdmin ? '/admin' : '/dashboard');
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate(from, { replace: true });
+        }
+    }, [isAuthenticated, navigate, from]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,10 +28,8 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const success = await login(email, password);
-            if (success) {
-                navigate('/dashboard');
-            } else {
+            const success = await login(email, password, rememberMe);
+            if (!success) {
                 setError('Invalid email or password');
             }
         } catch (err) {
@@ -31,6 +39,17 @@ const Login = () => {
             setLoading(false);
         }
     };
+
+    if (isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Redirecting...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="pt-16 min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -101,6 +120,22 @@ const Login = () => {
                                 </button>
                             </div>
                         </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                                <input
+                                    id="remember-me"
+                                    name="remember-me"
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                                />
+                                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                                    Keep me signed in
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
                     <button
@@ -120,10 +155,12 @@ const Login = () => {
                         </p>
                     </div>
 
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-gray-600 text-center mb-2">Demo Accounts:</p>
-                        <p className="text-xs text-gray-500 text-center">
-                            Admin: admin@seacatering.com / Admin123!
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <p className="text-xs text-blue-800 text-center mb-2">
+                            <strong>Getting Started:</strong>
+                        </p>
+                        <p className="text-xs text-blue-700 text-center">
+                            Create a new account to get started. The first user can be promoted to admin through the database.
                         </p>
                     </div>
                 </form>

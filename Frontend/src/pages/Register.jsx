@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Utensils, Check, X } from 'lucide-react';
@@ -14,8 +14,14 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { register } = useAuth();
+    const { register, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate(isAdmin ? '/admin' : '/dashboard', { replace: true });
+        }
+    }, [isAuthenticated, isAdmin, navigate]);
 
     const passwordRequirements = [
         { text: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
@@ -53,17 +59,32 @@ const Register = () => {
         try {
             const success = await register(formData.fullName, formData.email, formData.password);
             if (success) {
-                navigate('/login');
+                navigate('/login', {
+                    state: {
+                        message: 'Account created successfully! Please sign in.'
+                    }
+                });
             } else {
                 setError('Registration failed. Email may already be in use.');
             }
-        } catch (error) {
-            console.error('Registration error:', error);
+        } catch (err) {
+            console.error('Registration error:', err);
             setError('Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }
     };
+
+    if (isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Redirecting...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="pt-16 min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

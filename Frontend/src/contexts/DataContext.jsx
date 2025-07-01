@@ -17,7 +17,6 @@ export const DataProvider = ({ children }) => {
     const [subscriptions, setSubscriptions] = useState([]);
 
     useEffect(() => {
-        // Initialize meal plans
         const initialMealPlans = [
             {
                 id: '1',
@@ -60,7 +59,6 @@ export const DataProvider = ({ children }) => {
             }
         ];
 
-        // Initialize sample testimonials
         const initialTestimonials = [
             {
                 id: '1',
