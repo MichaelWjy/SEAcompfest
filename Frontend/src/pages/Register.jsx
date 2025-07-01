@@ -14,8 +14,15 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { register } = useAuth();
+    const { register, isAuthenticated } = useAuth();
     const navigate = useNavigate();
+
+    // Redirect if already authenticated
+    React.useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/dashboard');
+        }
+    }, [isAuthenticated, navigate]);
 
     const passwordRequirements = [
         { text: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
@@ -51,11 +58,13 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const success = await register(formData.fullName, formData.email, formData.password);
-            if (success) {
-                navigate('/login');
+            const result = await register(formData.fullName, formData.email, formData.password);
+            if (result.success) {
+                navigate('/login', { 
+                    state: { message: 'Registration successful! Please log in.' }
+                });
             } else {
-                setError('Registration failed. Email may already be in use.');
+                setError(result.error || 'Registration failed. Email may already be in use.');
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -63,6 +72,23 @@ const Register = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const renderStars = (rating, interactive = false, onRatingChange) => {
+        return (
+            <div className="flex space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                        key={star}
+                        className={`h-5 w-5 ${star <= rating
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                            } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
+                        onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
+                    />
+                ))}
+            </div>
+        );
     };
 
     return (

@@ -9,8 +9,15 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
+
+    // Redirect if already authenticated
+    React.useEffect(() => {
+        if (isAuthenticated) {
+            navigate(isAdmin ? '/admin' : '/dashboard');
+        }
+    }, [isAuthenticated, isAdmin, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,11 +25,11 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const success = await login(email, password);
-            if (success) {
-                navigate('/dashboard');
+            const result = await login(email, password);
+            if (result.success) {
+                // Navigation will be handled by the useEffect above
             } else {
-                setError('Invalid email or password');
+                setError(result.error || 'Invalid email or password');
             }
         } catch (err) {
             console.error('Login error:', err);

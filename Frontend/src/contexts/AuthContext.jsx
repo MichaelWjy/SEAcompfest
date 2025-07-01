@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
+import { authAPI } from '../Services/api';
 
 const AuthContext = createContext();
 
@@ -14,12 +13,29 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check for existing session only - no default user creation
-        const currentUser = localStorage.getItem('currentUser');
-        if (currentUser) {
-            setUser(JSON.parse(currentUser));
+        // Check for existing session
+        const token = localStorage.getItem('token');
+        if (token) {
+            // Verify token with backend
+            authAPI.getCurrentUser()
+                .then(response => {
+                    if (response.data.success) {
+                        setUser(response.data.user);
+                    } else {
+                        localStorage.removeItem('token');
+                    }
+                })
+                .catch(() => {
+                    localStorage.removeItem('token');
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        } else {
+            setLoading(false);
         }
     }, []);
 
@@ -33,23 +49,10 @@ export const AuthProvider = ({ children }) => {
         return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
     };
 
-    const sanitizeInput = (input) => {
-        return input
-            .replace(/</g, '<')
-            .replace(/>/g, '>')
-            .replace(/"/g, '"')
-            .replace(/'/g, '')
-                .replace(/\//g, '/');
-    };
-
     const register = async (fullName, email, password) => {
         try {
-            // Sanitize inputs
-            const sanitizedName = sanitizeInput(fullName.trim());
-            const sanitizedEmail = sanitizeInput(email.trim().toLowerCase());
-
             // Validate inputs
-            if (!sanitizedName || !sanitizedEmail || !password) {
+            if (!fullName || !email || !password) {
                 throw new Error('All fields are required');
             }
 
@@ -58,61 +61,57 @@ export const AuthProvider = ({ children }) => {
             }
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(sanitizedEmail)) {
+            if (!emailRegex.test(email)) {
                 throw new Error('Invalid email format');
             }
 
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const response = await authAPI.register({
+                fullName: fullName.trim(),
+                email: email.trim().toLowerCase(),
+                password
+            });
 
-            // Check if user already exists
-            if (users.find((u) => u.email === sanitizedEmail)) {
-                throw new Error('User already exists');
+            if (response.data.success) {
+                return { success: true };
+            } else {
+                return { success: false, error: response.data.message };
             }
-
-            const newUser = {
-                id: uuidv4(),
-                fullName: sanitizedName,
-                email: sanitizedEmail,
-                password: bcrypt.hashSync(password, 10),
-                isAdmin: false, // All new users are regular users by default
-                createdAt: new Date()
-            };
-
-            users.push(newUser);
-            localStorage.setItem('users', JSON.stringify(users));
-
-            return true;
         } catch (error) {
             console.error('Registration error:', error);
-            return false;
+            return { 
+                success: false, 
+                error: error.response?.data?.message || error.message || 'Registration failed'
+            };
         }
     };
 
     const login = async (email, password) => {
         try {
-            const sanitizedEmail = sanitizeInput(email.trim().toLowerCase());
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const response = await authAPI.login({
+                email: email.trim().toLowerCase(),
+                password
+            });
 
-            const foundUser = users.find((u) => u.email === sanitizedEmail);
-
-            if (foundUser && bcrypt.compareSync(password, foundUser.password)) {
-                const userWithoutPassword = { ...foundUser };
-                delete userWithoutPassword.password;
-                setUser(userWithoutPassword);
-                localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-                return true;
+            if (response.data.success) {
+                const { token, user } = response.data;
+                localStorage.setItem('token', token);
+                setUser(user);
+                return { success: true };
+            } else {
+                return { success: false, error: response.data.message };
             }
-
-            return false;
         } catch (error) {
             console.error('Login error:', error);
-            return false;
+            return { 
+                success: false, 
+                error: error.response?.data?.message || 'Login failed'
+            };
         }
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('currentUser');
+        localStorage.removeItem('token');
     };
 
     const value = {
@@ -120,8 +119,9 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        loading,
         isAuthenticated: !!user,
-        isAdmin: user?.isAdmin || false
+        isAdmin: user?.is_admin || false
     };
 
     return (
