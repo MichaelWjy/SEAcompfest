@@ -3,87 +3,68 @@ import { useData } from '../contexts/DataContext';
 import { Star, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 
 const TestimonialsSection = () => {
-    const { testimonials, addTestimonial } = useData();
+    const { testimonials = [], addTestimonial } = useData();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         customerName: '',
         message: '',
-        rating: 5
+        rating: 5,
     });
     const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
 
+    // Amanin navigasi
     const nextTestimonial = () => {
+        if (testimonials.length === 0) return;
         setCurrentIndex((prev) => (prev + 1) % testimonials.length);
     };
 
     const prevTestimonial = () => {
+        if (testimonials.length === 0) return;
         setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
     };
 
     const validateForm = () => {
         const newErrors = {};
-
         if (!formData.customerName.trim()) {
             newErrors.customerName = 'Name is required';
         }
-
         if (!formData.message.trim()) {
             newErrors.message = 'Review message is required';
         } else if (formData.message.length < 10) {
             newErrors.message = 'Review must be at least 10 characters long';
         }
-
         if (formData.rating < 1 || formData.rating > 5) {
             newErrors.rating = 'Rating must be between 1 and 5';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
+        if (!validateForm()) return;
 
-        if (!validateForm()) {
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            const result = await addTestimonial(formData);
-            if (result.success) {
-                setFormData({ customerName: '', message: '', rating: 5 });
-                setShowForm(false);
-                setErrors({});
-            } else {
-                setErrors({ submit: result.error || 'Failed to submit testimonial' });
-            }
-        } catch (error) {
-            setErrors({ submit: 'Failed to submit testimonial' });
-        } finally {
-            setLoading(false);
-        }
+        addTestimonial(formData);
+        setFormData({ customerName: '', message: '', rating: 5 });
+        setShowForm(false);
+        setErrors({});
     };
 
-    const renderStars = (rating, interactive = false, onRatingChange) => {
-        return (
-            <div className="flex space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                        key={star}
-                        className={`h-5 w-5 ${star <= rating
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
-                            } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-                        onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
-                    />
-                ))}
-            </div>
-        );
-    };
+    const renderStars = (rating, interactive = false, onRatingChange) => (
+        <div className="flex space-x-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    className={`h-5 w-5 ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'} ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''
+                        }`}
+                    onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
+                />
+            ))}
+        </div>
+    );
+
+    const safeTestimonial = testimonials.length > 0 ? testimonials[currentIndex] : null;
 
     return (
         <section className="py-20 bg-white">
@@ -100,20 +81,20 @@ const TestimonialsSection = () => {
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Testimonial Carousel */}
                     <div className="relative">
-                        {testimonials.length > 0 && (
+                        {safeTestimonial ? (
                             <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-2xl p-8">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center space-x-4">
                                         <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
                                             <span className="text-white font-bold text-lg">
-                                                {testimonials[currentIndex].customer_name.charAt(0)}
+                                                {safeTestimonial.customerName?.charAt(0).toUpperCase() || '?'}
                                             </span>
                                         </div>
                                         <div>
                                             <h4 className="font-semibold text-gray-900">
-                                                {testimonials[currentIndex].customer_name}
+                                                {safeTestimonial.customerName || 'Anonymous'}
                                             </h4>
-                                            {renderStars(testimonials[currentIndex].rating)}
+                                            {renderStars(safeTestimonial.rating || 5)}
                                         </div>
                                     </div>
 
@@ -134,20 +115,24 @@ const TestimonialsSection = () => {
                                 </div>
 
                                 <blockquote className="text-gray-700 text-lg leading-relaxed">
-                                    "{testimonials[currentIndex].message}"
+                                    "{safeTestimonial.message || 'No testimonial available.'}"
                                 </blockquote>
 
                                 <div className="mt-4 text-sm text-gray-500">
-                                    {new Date(testimonials[currentIndex].created_at).toLocaleDateString('id-ID', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                    })}
+                                    {safeTestimonial.date
+                                        ? new Date(safeTestimonial.date).toLocaleDateString('id-ID', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                        })
+                                        : 'Unknown date'}
                                 </div>
                             </div>
+                        ) : (
+                            <p className="text-gray-500">No testimonials yet.</p>
                         )}
 
-                        {/* Dots indicator */}
+                        {/* Dots */}
                         {testimonials.length > 1 && (
                             <div className="flex justify-center mt-6 space-x-2">
                                 {testimonials.map((_, index) => (
@@ -185,12 +170,6 @@ const TestimonialsSection = () => {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-6">
-                                {errors.submit && (
-                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                                        {errors.submit}
-                                    </div>
-                                )}
-
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Your Name *
@@ -198,7 +177,9 @@ const TestimonialsSection = () => {
                                     <input
                                         type="text"
                                         value={formData.customerName}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                                        onChange={(e) =>
+                                            setFormData((prev) => ({ ...prev, customerName: e.target.value }))
+                                        }
                                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.customerName ? 'border-red-300' : 'border-gray-300'
                                             }`}
                                         placeholder="Enter your name"
@@ -213,7 +194,7 @@ const TestimonialsSection = () => {
                                         Rating *
                                     </label>
                                     {renderStars(formData.rating, true, (rating) =>
-                                        setFormData(prev => ({ ...prev, rating }))
+                                        setFormData((prev) => ({ ...prev, rating }))
                                     )}
                                     {errors.rating && (
                                         <p className="mt-1 text-sm text-red-600">{errors.rating}</p>
@@ -226,7 +207,9 @@ const TestimonialsSection = () => {
                                     </label>
                                     <textarea
                                         value={formData.message}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                                        onChange={(e) =>
+                                            setFormData((prev) => ({ ...prev, message: e.target.value }))
+                                        }
                                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.message ? 'border-red-300' : 'border-gray-300'
                                             }`}
                                         rows={4}
@@ -251,10 +234,9 @@ const TestimonialsSection = () => {
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={loading}
-                                        className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                        className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors duration-200"
                                     >
-                                        {loading ? 'Submitting...' : 'Submit Review'}
+                                        Submit Review
                                     </button>
                                 </div>
                             </form>
