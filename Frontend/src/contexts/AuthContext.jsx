@@ -69,11 +69,9 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (fullName, email, password) => {
         try {
-            // Sanitize inputs
             const sanitizedName = sanitizeInput(fullName.trim());
             const sanitizedEmail = sanitizeInput(email.trim().toLowerCase());
 
-            // Validate inputs
             if (!sanitizedName || !sanitizedEmail || !password) {
                 throw new Error('All fields are required');
             }
@@ -89,7 +87,6 @@ export const AuthProvider = ({ children }) => {
 
             const users = JSON.parse(localStorage.getItem('users') || '[]');
 
-            // Check if user already exists
             if (users.find((u) => u.email === sanitizedEmail)) {
                 throw new Error('User already exists');
             }
@@ -99,7 +96,7 @@ export const AuthProvider = ({ children }) => {
                 fullName: sanitizedName,
                 email: sanitizedEmail,
                 password: bcrypt.hashSync(password, 10),
-                isAdmin: false, // All new users are regular users by default
+                isAdmin: false, 
                 createdAt: new Date()
             };
 
@@ -127,11 +124,9 @@ export const AuthProvider = ({ children }) => {
                 setUser(userWithoutPassword);
 
                 if (rememberMe) {
-                    // Store user session with timestamp
                     localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
                     localStorage.setItem('loginTimestamp', Date.now().toString());
                 } else {
-                    // For session-only login (though we'll default to persistent)
                     sessionStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
                 }
 
