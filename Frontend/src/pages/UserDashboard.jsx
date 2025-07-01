@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { Calendar, Pause, X, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 const UserDashboard = () => {
     const { user } = useAuth();
-    const { getUserSubscriptions, updateSubscription } = useData();
+    const { getUserSubscriptions, updateSubscription, loadUserSubscriptions } = useData();
     const [selectedSubscription, setSelectedSubscription] = useState(null);
     const [pauseData, setPauseData] = useState({ from: '', to: '' });
     const [showPauseModal, setShowPauseModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
 
-    const subscriptions = user ? getUserSubscriptions(user.id) : [];
+    const subscriptions = getUserSubscriptions();
+
+    useEffect(() => {
+        // Load user subscriptions when component mounts
+        if (user) {
+            loadUserSubscriptions();
+        }
+    }, [user, loadUserSubscriptions]);
 
     const formatPrice = (price) => {
         return new Intl.NumberFormat('id-ID', {
@@ -29,26 +36,32 @@ const UserDashboard = () => {
         });
     };
 
-    const handlePauseSubscription = () => {
+    const handlePauseSubscription = async () => {
         if (selectedSubscription && pauseData.from && pauseData.to) {
-            updateSubscription(selectedSubscription, {
+            const result = await updateSubscription(selectedSubscription, {
                 status: 'paused',
-                pausedFrom: new Date(pauseData.from),
-                pausedTo: new Date(pauseData.to)
+                pausedFrom: pauseData.from,
+                pausedTo: pauseData.to
             });
-            setShowPauseModal(false);
-            setPauseData({ from: '', to: '' });
-            setSelectedSubscription(null);
+            
+            if (result.success) {
+                setShowPauseModal(false);
+                setPauseData({ from: '', to: '' });
+                setSelectedSubscription(null);
+            }
         }
     };
 
-    const handleCancelSubscription = () => {
+    const handleCancelSubscription = async () => {
         if (selectedSubscription) {
-            updateSubscription(selectedSubscription, {
+            const result = await updateSubscription(selectedSubscription, {
                 status: 'cancelled'
             });
-            setShowCancelModal(false);
-            setSelectedSubscription(null);
+            
+            if (result.success) {
+                setShowCancelModal(false);
+                setSelectedSubscription(null);
+            }
         }
     };
 
@@ -83,7 +96,7 @@ const UserDashboard = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        Welcome back, {user?.fullName}!
+                        Welcome back, {user?.full_name}!
                     </h1>
                     <p className="text-gray-600">Manage your SEA Catering subscriptions</p>
                 </div>
@@ -109,17 +122,17 @@ const UserDashboard = () => {
                                 <div className="flex justify-between items-start mb-6">
                                     <div>
                                         <div className="flex items-center space-x-3 mb-2">
-                                            <h3 className="text-xl font-bold text-gray-900">{subscription.plan}</h3>
+                                            <h3 className="text-xl font-bold text-gray-900">{subscription.plan_name}</h3>
                                             <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(subscription.status)}`}>
                                                 {getStatusIcon(subscription.status)}
                                                 <span className="capitalize">{subscription.status}</span>
                                             </div>
                                         </div>
-                                        <p className="text-gray-600">Subscribed on {formatDate(subscription.createdAt)}</p>
+                                        <p className="text-gray-600">Subscribed on {formatDate(subscription.created_at)}</p>
                                     </div>
                                     <div className="text-right">
                                         <div className="text-2xl font-bold text-emerald-600">
-                                            {formatPrice(subscription.totalPrice)}
+                                            {formatPrice(subscription.total_price)}
                                         </div>
                                         <div className="text-sm text-gray-500">per month</div>
                                     </div>
@@ -160,10 +173,10 @@ const UserDashboard = () => {
                                     </div>
                                 </div>
 
-                                {subscription.status === 'paused' && subscription.pausedFrom && subscription.pausedTo && (
+                                {subscription.status === 'paused' && subscription.paused_from && subscription.paused_to && (
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                                         <p className="text-yellow-800">
-                                            <strong>Paused:</strong> {formatDate(subscription.pausedFrom)} - {formatDate(subscription.pausedTo)}
+                                            <strong>Paused:</strong> {formatDate(subscription.paused_from)} - {formatDate(subscription.paused_to)}
                                         </p>
                                     </div>
                                 )}

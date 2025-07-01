@@ -6,11 +6,11 @@ import { Check, AlertCircle } from 'lucide-react';
 
 const Subscription = () => {
     const { user } = useAuth();
-    const { addSubscription } = useData();
+    const { addSubscription, mealPlans } = useData();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        name: user?.fullName || '',
+        name: user?.full_name || '',
         phone: '',
         plan: '',
         mealTypes: [],
@@ -20,23 +20,15 @@ const Subscription = () => {
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
-    const plans = [
-        { id: 'diet', name: 'Diet Plan', price: 30000 },
-        { id: 'protein', name: 'Protein Plan', price: 40000 },
-        { id: 'royal', name: 'Royal Plan', price: 60000 }
-    ];
+    // Convert meal plans from API to the format expected by the form
+    const plans = mealPlans.map(plan => ({
+        id: plan.name.toLowerCase().replace(' ', ''),
+        name: plan.name,
+        price: plan.price
+    }));
 
     const mealTypes = ['Breakfast', 'Lunch', 'Dinner'];
     const deliveryDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-    const sanitizeInput = (input) => {
-        return input
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;')
-            .replace(/\//g, '&#x2F;');
-    };
 
     const validateForm = () => {
         const newErrors = {};
@@ -120,20 +112,22 @@ const Subscription = () => {
             }
 
             const subscription = {
-                userId: user.id,
-                name: sanitizeInput(formData.name),
-                phone: sanitizeInput(formData.phone),
+                name: formData.name,
+                phone: formData.phone,
                 plan: selectedPlan.name,
                 planPrice: selectedPlan.price,
                 mealTypes: formData.mealTypes,
                 deliveryDays: formData.deliveryDays,
-                allergies: sanitizeInput(formData.allergies),
-                totalPrice: calculateTotalPrice(),
-                status: 'active'
+                allergies: formData.allergies,
+                totalPrice: calculateTotalPrice()
             };
 
-            addSubscription(subscription);
-            navigate('/dashboard');
+            const result = await addSubscription(subscription);
+            if (result.success) {
+                navigate('/dashboard');
+            } else {
+                setErrors({ submit: result.error || 'Failed to create subscription. Please try again.' });
+            }
         } catch (error) {
             console.error('Subscription error:', error);
             setErrors({ submit: 'Failed to create subscription. Please try again.' });
