@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../Services/api';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
 const AuthContext = createContext();
 
@@ -13,30 +14,38 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); 
 
     useEffect(() => {
-        // Check for existing session
-        const token = localStorage.getItem('token');
-        if (token) {
-            // Verify token with backend
-            authAPI.getCurrentUser()
-                .then(response => {
-                    if (response.data.success) {
-                        setUser(response.data.user);
+        const checkExistingSession = () => {
+            try {
+                const currentUser = localStorage.getItem('currentUser');
+                const loginTimestamp = localStorage.getItem('loginTimestamp');
+
+                if (currentUser && loginTimestamp) {
+                    const user = JSON.parse(currentUser);
+                    const timestamp = parseInt(loginTimestamp);
+                    const now = Date.now();
+                    const sessionDuration = 7 * 24 * 60 * 60 * 1000; 
+
+                    if (now - timestamp < sessionDuration) {
+                        setUser(user);
                     } else {
-                        localStorage.removeItem('token');
+                        localStorage.removeItem('currentUser');
+                        localStorage.removeItem('loginTimestamp');
                     }
-                })
-                .catch(() => {
-                    localStorage.removeItem('token');
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
-        } else {
-            setLoading(false);
-        }
+                }
+            } catch (error) {
+                console.error('Error checking existing session:', error);
+                // Clear corrupted data
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('loginTimestamp');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkExistingSession();
     }, []);
 
     const validatePassword = (password) => {
@@ -49,10 +58,21 @@ export const AuthProvider = ({ children }) => {
         return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
     };
 
+    const sanitizeInput = (input) => {
+        return input
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    };
+
     const register = async (fullName, email, password) => {
         try {
-            // Validate inputs
-            if (!fullName || !email || !password) {
+            const sanitizedName = sanitizeInput(fullName.trim());
+            const sanitizedEmail = sanitizeInput(email.trim().toLowerCase());
+
+            if (!sanitizedName || !sanitizedEmail || !password) {
                 throw new Error('All fields are required');
             }
 
@@ -61,57 +81,75 @@ export const AuthProvider = ({ children }) => {
             }
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
+            if (!emailRegex.test(sanitizedEmail)) {
                 throw new Error('Invalid email format');
             }
 
-            const response = await authAPI.register({
-                fullName: fullName.trim(),
-                email: email.trim().toLowerCase(),
-                password
-            });
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
 
-            if (response.data.success) {
-                return { success: true };
-            } else {
-                return { success: false, error: response.data.message };
+            if (users.find((u) => u.email === sanitizedEmail)) {
+                throw new Error('User already exists');
             }
+
+            const newUser = {
+                id: uuidv4(),
+                fullName: sanitizedName,
+                email: sanitizedEmail,
+                password: bcrypt.hashSync(password, 10),
+                isAdmin: false, 
+                createdAt: new Date()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+
+            return true;
         } catch (error) {
             console.error('Registration error:', error);
-            return { 
-                success: false, 
-                error: error.response?.data?.message || error.message || 'Registration failed'
-            };
+            return false;
         }
     };
 
-    const login = async (email, password) => {
+    const login = async (email, password, rememberMe = true) => {
         try {
-            const response = await authAPI.login({
-                email: email.trim().toLowerCase(),
-                password
-            });
+            const sanitizedEmail = sanitizeInput(email.trim().toLowerCase());
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
 
-            if (response.data.success) {
-                const { token, user } = response.data;
-                localStorage.setItem('token', token);
-                setUser(user);
-                return { success: true };
-            } else {
-                return { success: false, error: response.data.message };
+            const foundUser = users.find((u) => u.email === sanitizedEmail);
+
+            if (foundUser && bcrypt.compareSync(password, foundUser.password)) {
+                const userWithoutPassword = { ...foundUser };
+                delete userWithoutPassword.password;
+
+                setUser(userWithoutPassword);
+
+                if (rememberMe) {
+                    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+                    localStorage.setItem('loginTimestamp', Date.now().toString());
+                } else {
+                    sessionStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+                }
+
+                return true;
             }
+
+            return false;
         } catch (error) {
             console.error('Login error:', error);
-            return { 
-                success: false, 
-                error: error.response?.data?.message || 'Login failed'
-            };
+            return false;
         }
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('loginTimestamp');
+        sessionStorage.removeItem('currentUser');
+    };
+
+    const updateUserSession = (updatedUser) => {
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
     };
 
     const value = {
@@ -119,9 +157,10 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        loading,
+        updateUserSession,
         isAuthenticated: !!user,
-        isAdmin: user?.is_admin || false
+        isAdmin: user?.isAdmin || false,
+        loading
     };
 
     return (

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mealPlansAPI, testimonialsAPI, subscriptionsAPI } from '../Services/api';
+import { v4 as uuidv4 } from 'uuid';
 
 const DataContext = createContext();
 
@@ -15,143 +15,159 @@ export const DataProvider = ({ children }) => {
     const [mealPlans, setMealPlans] = useState([]);
     const [testimonials, setTestimonials] = useState([]);
     const [subscriptions, setSubscriptions] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadInitialData();
+        const initialMealPlans = [
+            {
+                id: '1',
+                name: 'Diet Plan',
+                price: 30000,
+                description: 'Perfect for weight management and healthy living',
+                features: [
+                    'Low-calorie balanced meals',
+                    'Fresh vegetables and lean proteins',
+                    'Portion-controlled servings',
+                    'Nutritionist-approved recipes'
+                ],
+                image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800'
+            },
+            {
+                id: '2',
+                name: 'Protein Plan',
+                price: 40000,
+                description: 'High-protein meals for active lifestyles and muscle building',
+                features: [
+                    'High-quality protein sources',
+                    'Post-workout recovery meals',
+                    'Muscle-building nutrients',
+                    'Energy-boosting ingredients'
+                ],
+                image: 'https://images.pexels.com/photos/1566837/pexels-photo-1566837.jpeg?auto=compress&cs=tinysrgb&w=800'
+            },
+            {
+                id: '3',
+                name: 'Royal Plan',
+                price: 60000,
+                description: 'Premium gourmet meals with the finest ingredients',
+                features: [
+                    'Gourmet chef-prepared meals',
+                    'Premium organic ingredients',
+                    'Exotic and international cuisines',
+                    'Luxury dining experience at home'
+                ],
+                image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=800'
+            }
+        ];
+
+        const initialTestimonials = [
+            {
+                id: '1',
+                customerName: 'Sarah Johnson',
+                message: 'SEA Catering has transformed my eating habits! The meals are delicious and perfectly portioned.',
+                rating: 5,
+                date: new Date('2024-01-15')
+            },
+            {
+                id: '2',
+                customerName: 'Ahmad Rahman',
+                message: 'Great service and amazing food quality. Delivery is always on time!',
+                rating: 5,
+                date: new Date('2024-01-20')
+            },
+            {
+                id: '3',
+                customerName: 'Maria Santos',
+                message: 'The Royal Plan is absolutely worth it. Every meal feels like fine dining.',
+                rating: 4,
+                date: new Date('2024-01-25')
+            }
+        ];
+
+        setMealPlans(initialMealPlans);
+
+        // Load data from localStorage
+        const savedTestimonials = localStorage.getItem('testimonials');
+        if (savedTestimonials) {
+            setTestimonials(JSON.parse(savedTestimonials));
+        } else {
+            setTestimonials(initialTestimonials);
+            localStorage.setItem('testimonials', JSON.stringify(initialTestimonials));
+        }
+
+        const savedSubscriptions = localStorage.getItem('subscriptions');
+        if (savedSubscriptions) {
+            setSubscriptions(JSON.parse(savedSubscriptions));
+        }
     }, []);
 
-    const loadInitialData = async () => {
-        try {
-            // Load meal plans
-            const mealPlansResponse = await mealPlansAPI.getAll();
-            if (mealPlansResponse.data.success) {
-                setMealPlans(mealPlansResponse.data.mealPlans);
-            }
-
-            // Load testimonials
-            const testimonialsResponse = await testimonialsAPI.getAll();
-            if (testimonialsResponse.data.success) {
-                setTestimonials(testimonialsResponse.data.testimonials);
-            }
-        } catch (error) {
-            console.error('Error loading initial data:', error);
-        } finally {
-            setLoading(false);
-        }
+    const sanitizeInput = (input) => {
+        return input
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
     };
 
-    const addTestimonial = async (testimonial) => {
-        try {
-            const response = await testimonialsAPI.create({
-                customerName: testimonial.customerName,
-                message: testimonial.message,
-                rating: testimonial.rating
-            });
+    const addTestimonial = (testimonial) => {
+        const newTestimonial = {
+            ...testimonial,
+            id: uuidv4(),
+            customerName: sanitizeInput(testimonial.customerName),
+            message: sanitizeInput(testimonial.message),
+            date: new Date()
+        };
 
-            if (response.data.success) {
-                // Reload testimonials to get updated list
-                const testimonialsResponse = await testimonialsAPI.getAll();
-                if (testimonialsResponse.data.success) {
-                    setTestimonials(testimonialsResponse.data.testimonials);
-                }
-                return { success: true };
-            } else {
-                return { success: false, error: response.data.message };
-            }
-        } catch (error) {
-            console.error('Error adding testimonial:', error);
-            return { 
-                success: false, 
-                error: error.response?.data?.message || 'Failed to add testimonial'
-            };
-        }
+        const updatedTestimonials = [...testimonials, newTestimonial];
+        setTestimonials(updatedTestimonials);
+        localStorage.setItem('testimonials', JSON.stringify(updatedTestimonials));
     };
 
-    const addSubscription = async (subscription) => {
-        try {
-            const response = await subscriptionsAPI.create({
-                name: subscription.name,
-                phone: subscription.phone,
-                planName: subscription.plan,
-                planPrice: subscription.planPrice,
-                mealTypes: subscription.mealTypes,
-                deliveryDays: subscription.deliveryDays,
-                allergies: subscription.allergies,
-                totalPrice: subscription.totalPrice
-            });
+    const addSubscription = (subscription) => {
+        const newSubscription = {
+            ...subscription,
+            id: uuidv4(),
+            name: sanitizeInput(subscription.name),
+            phone: sanitizeInput(subscription.phone),
+            allergies: sanitizeInput(subscription.allergies),
+            createdAt: new Date()
+        };
 
-            if (response.data.success) {
-                // Reload user subscriptions
-                await loadUserSubscriptions();
-                return { success: true };
-            } else {
-                return { success: false, error: response.data.message };
-            }
-        } catch (error) {
-            console.error('Error adding subscription:', error);
-            return { 
-                success: false, 
-                error: error.response?.data?.message || 'Failed to create subscription'
-            };
-        }
+        const updatedSubscriptions = [...subscriptions, newSubscription];
+        setSubscriptions(updatedSubscriptions);
+        localStorage.setItem('subscriptions', JSON.stringify(updatedSubscriptions));
     };
 
-    const loadUserSubscriptions = async () => {
-        try {
-            const response = await subscriptionsAPI.getMySubscriptions();
-            if (response.data.success) {
-                setSubscriptions(response.data.subscriptions);
-            }
-        } catch (error) {
-            console.error('Error loading user subscriptions:', error);
-        }
-    };
-
-    const updateSubscription = async (id, updates) => {
-        try {
-            const response = await subscriptionsAPI.updateStatus(id, updates);
-            if (response.data.success) {
-                // Reload user subscriptions
-                await loadUserSubscriptions();
-                return { success: true };
-            } else {
-                return { success: false, error: response.data.message };
-            }
-        } catch (error) {
-            console.error('Error updating subscription:', error);
-            return { 
-                success: false, 
-                error: error.response?.data?.message || 'Failed to update subscription'
-            };
-        }
+    const updateSubscription = (id, updates) => {
+        const updatedSubscriptions = subscriptions.map(sub =>
+            sub.id === id ? { ...sub, ...updates } : sub
+        );
+        setSubscriptions(updatedSubscriptions);
+        localStorage.setItem('subscriptions', JSON.stringify(updatedSubscriptions));
     };
 
     const getUserSubscriptions = (userId) => {
-        // Since we're now loading from API, we don't filter by userId here
-        // The API already returns only the current user's subscriptions
-        return subscriptions;
+        return subscriptions.filter(sub => sub.userId === userId);
     };
 
-    const getSubscriptionStats = async (startDate, endDate) => {
-        // This would be implemented for admin dashboard
-        // For now, return basic stats from current subscriptions
+    const getSubscriptionStats = (startDate, endDate) => {
         const now = new Date();
         const start = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
         const end = endDate || now;
 
         const filteredSubs = subscriptions.filter(sub => {
-            const createdAt = new Date(sub.created_at);
+            const createdAt = new Date(sub.createdAt);
             return createdAt >= start && createdAt <= end;
         });
 
         const newSubscriptions = filteredSubs.length;
         const monthlyRevenue = subscriptions
             .filter(sub => sub.status === 'active')
-            .reduce((total, sub) => total + sub.total_price, 0);
+            .reduce((total, sub) => total + sub.totalPrice, 0);
 
         const reactivations = subscriptions.filter(sub => {
-            return sub.status === 'active' && sub.paused_from;
+            // This would track reactivations in a real app
+            return sub.status === 'active' && sub.pausedFrom;
         }).length;
 
         const activeSubscriptions = subscriptions.filter(sub => sub.status === 'active').length;
@@ -168,13 +184,11 @@ export const DataProvider = ({ children }) => {
         mealPlans,
         testimonials,
         subscriptions,
-        loading,
         addTestimonial,
         addSubscription,
         updateSubscription,
         getUserSubscriptions,
-        getSubscriptionStats,
-        loadUserSubscriptions
+        getSubscriptionStats
     };
 
     return (

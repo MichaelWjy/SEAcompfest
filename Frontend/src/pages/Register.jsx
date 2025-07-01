@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Utensils, Check, X } from 'lucide-react';
@@ -14,15 +14,14 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { register, isAuthenticated } = useAuth();
+    const { register, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
 
-    // Redirect if already authenticated
-    React.useEffect(() => {
+    useEffect(() => {
         if (isAuthenticated) {
-            navigate('/dashboard');
+            navigate(isAdmin ? '/admin' : '/dashboard', { replace: true });
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, isAdmin, navigate]);
 
     const passwordRequirements = [
         { text: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
@@ -58,38 +57,34 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const result = await register(formData.fullName, formData.email, formData.password);
-            if (result.success) {
-                navigate('/login', { 
-                    state: { message: 'Registration successful! Please log in.' }
+            const success = await register(formData.fullName, formData.email, formData.password);
+            if (success) {
+                navigate('/login', {
+                    state: {
+                        message: 'Account created successfully! Please sign in.'
+                    }
                 });
             } else {
-                setError(result.error || 'Registration failed. Email may already be in use.');
+                setError('Registration failed. Email may already be in use.');
             }
-        } catch (error) {
-            console.error('Registration error:', error);
+        } catch (err) {
+            console.error('Registration error:', err);
             setError('Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const renderStars = (rating, interactive = false, onRatingChange) => {
+    if (isAuthenticated) {
         return (
-            <div className="flex space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                        key={star}
-                        className={`h-5 w-5 ${star <= rating
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
-                            } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-                        onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
-                    />
-                ))}
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Redirecting...</p>
+                </div>
             </div>
         );
-    };
+    }
 
     return (
         <div className="pt-16 min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
