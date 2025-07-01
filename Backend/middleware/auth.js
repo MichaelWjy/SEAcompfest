@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import db from '../database/db.js'; 
+import pool from '../database/db.js'; 
 
 export const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -14,16 +14,16 @@ export const authenticateToken = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await db.getAsync('SELECT id, full_name, email, is_admin FROM users WHERE id = ?', [decoded.userId]);
+        const userResult = await pool.query('SELECT id, full_name, email, is_admin FROM users WHERE id = $1', [decoded.userId]);
 
-        if (!user) {
+        if (userResult.rows.length === 0) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid token'
             });
         }
 
-        req.user = user;
+        req.user = userResult.rows[0];
         next();
     } catch (error) {
         return res.status(403).json({

@@ -12,6 +12,7 @@ const TestimonialsSection = () => {
         rating: 5
     });
     const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
 
     const nextTestimonial = () => {
         setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -42,17 +43,29 @@ const TestimonialsSection = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!validateForm()) {
             return;
         }
 
-        addTestimonial(formData);
-        setFormData({ customerName: '', message: '', rating: 5 });
-        setShowForm(false);
-        setErrors({});
+        setLoading(true);
+
+        try {
+            const result = await addTestimonial(formData);
+            if (result.success) {
+                setFormData({ customerName: '', message: '', rating: 5 });
+                setShowForm(false);
+                setErrors({});
+            } else {
+                setErrors({ submit: result.error || 'Failed to submit testimonial' });
+            }
+        } catch (error) {
+            setErrors({ submit: 'Failed to submit testimonial' });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const renderStars = (rating, interactive = false, onRatingChange) => {
@@ -93,12 +106,12 @@ const TestimonialsSection = () => {
                                     <div className="flex items-center space-x-4">
                                         <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
                                             <span className="text-white font-bold text-lg">
-                                                {testimonials[currentIndex].customerName.charAt(0)}
+                                                {testimonials[currentIndex].customer_name.charAt(0)}
                                             </span>
                                         </div>
                                         <div>
                                             <h4 className="font-semibold text-gray-900">
-                                                {testimonials[currentIndex].customerName}
+                                                {testimonials[currentIndex].customer_name}
                                             </h4>
                                             {renderStars(testimonials[currentIndex].rating)}
                                         </div>
@@ -125,7 +138,7 @@ const TestimonialsSection = () => {
                                 </blockquote>
 
                                 <div className="mt-4 text-sm text-gray-500">
-                                    {new Date(testimonials[currentIndex].date).toLocaleDateString('id-ID', {
+                                    {new Date(testimonials[currentIndex].created_at).toLocaleDateString('id-ID', {
                                         year: 'numeric',
                                         month: 'long',
                                         day: 'numeric'
@@ -172,6 +185,12 @@ const TestimonialsSection = () => {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-6">
+                                {errors.submit && (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                                        {errors.submit}
+                                    </div>
+                                )}
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Your Name *
@@ -232,9 +251,10 @@ const TestimonialsSection = () => {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors duration-200"
+                                        disabled={loading}
+                                        className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                                     >
-                                        Submit Review
+                                        {loading ? 'Submitting...' : 'Submit Review'}
                                     </button>
                                 </div>
                             </form>
